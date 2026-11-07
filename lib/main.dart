@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// this is to load the files VVVV
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const MyApp());
@@ -7,115 +9,363 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Chris Learning Flutter',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Chris Learning Flutter'),
+    return const MaterialApp(
+      home: ParasiticDrawPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class ParasiticDrawPage extends StatefulWidget {
+  const ParasiticDrawPage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<ParasiticDrawPage> createState() => _ParasiticDrawPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
+  final TextEditingController voltageController =
+      TextEditingController();
 
-  void _incrementCounter() {
+  final TextEditingController resistanceController =
+      TextEditingController();
+  // this is a test for loading files
+  Future<void> loadFuseFile(String fuseType) async {
+    
+    String fileName = fuseFiles[fuseType]!;
+
+    String data =
+      await rootBundle.loadString(
+        'assets/data/$fileName',
+      );
+    List<String> lines = data.split('\n');
+    String ratingLine = lines[2];
+    List<String> ratings = ratingLine.split(',');
+    ratings.removeAt(0);
+
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      loadedRatings = ratings;
+      if (loadedRatings.isNotEmpty) {
+        selectedFuseRating = loadedRatings[0];
+      }
     });
+
+    print("Loaded Ratings:");
+    print(loadedRatings);
+    print("Number of ratings: ${loadedRatings.length}");
+  }
+  // end of the test for loading the files
+
+  //
+  // the variables
+  //
+  List<String> loadedRatings = [];
+  double currentDraw = 0.0;
+  double currentDrawMa = 0.0;
+  String diagnosis = "";
+  String selectedFuseType = "Mini";
+  final List<String> fuseTypes = [
+    'Mini',
+    'Micro',
+    'Standard',
+    'Maxi',
+    'Cartridge',
+    'Glass'
+  ];
+  final Map<String, String> fuseFiles = {
+    'Mini': 'mini_fuse.txt',
+    'Micro': 'micro_fuse.txt',
+    'Standard': 'standard_fuse.txt',
+    'Maxi': 'maxi_fuse.txt',
+    'Cartridge': 'cartrige_fuse.txt',
+    'Glass': 'glass_fuse.txt',
+  };
+  String selectedFuseRating = "10Amp";
+  final List<String> fuseRatings = [
+    "1A",
+    "2A",
+    "3A",
+    "4A",
+    "5A",
+    "7.5A",
+    "10A",
+    "15A",
+    "20A",
+    "25A",
+    "30A"
+  ];
+  String selectedMode = "Manual Resistance";
+
+  final List<String> calculationModes = [
+    "Manual Resistance",
+    "Fuse Chart Lookup"
+  ];
+
+  double lookupCurrentMa = 0.0;
+  final Map<double, double> mini10ATable = {
+    4.7: 633,
+    4.8: 647,
+    4.9: 660,
+    5.0: 674,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    loadFuseFile(selectedFuseType);
+  }
+
+  //
+  // End of variable section
+  //
+  
+  void clearFields() {
+    setState(() {
+      voltageController.clear();
+      resistanceController.clear();
+
+      currentDraw = 0.0;
+      currentDrawMa = 0.0;
+
+      diagnosis = "";
+    });
+  }
+
+  void calculateCurrent() {
+    double voltageMv =
+        double.tryParse(voltageController.text) ?? 0.0;
+    
+    if (selectedMode == "Fuse Chart Lookup") {
+
+      if (selectedFuseType == "Mini" &&
+        selectedFuseRating == "10Amp") {
+
+        if (mini10ATable.containsKey(voltageMv)) {
+
+          setState(() {
+
+            lookupCurrentMa = mini10ATable[voltageMv]!;
+
+            currentDrawMa = lookupCurrentMa;
+            currentDraw = lookupCurrentMa / 1000.0;
+
+            if (currentDrawMa < 50) {
+              diagnosis = "Normal";
+            }
+            else if (currentDrawMa < 100) {
+              diagnosis = "Elevated";
+            }
+            else {
+              diagnosis = "Excessive Draw";
+            }
+          });
+
+          return;
+        }
+      }
+    }
+
+    double resistanceMohm =
+        double.tryParse(resistanceController.text) ?? 0.0;
+
+    if (resistanceMohm > 0) {
+      setState(() {
+        currentDraw = voltageMv / resistanceMohm;
+        currentDrawMa = currentDraw * 1000;
+        if (currentDrawMa < 50) {
+          diagnosis = "Normal";
+        }
+        else if (currentDrawMa < 100) {
+          diagnosis = "Elevated";
+        }
+        else {
+          diagnosis = "Excessive Draw";
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text("Parasitic Draw Calculator"),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: Padding(
+        padding: const EdgeInsets.all(20),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              const Text(
+                "Calculation Mode",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              DropdownButton<String>(
+                value: selectedMode,
+                isExpanded: true,
+                items: calculationModes.map((String mode) {
+                  return DropdownMenuItem<String>(
+                    value: mode,
+                    child: Text(mode),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedMode = newValue!;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              if (selectedMode == "Fuse Chart Lookup") ...[
+                const Text(
+                  "Fuse Type",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              
+                DropdownButton<String>(
+                  value: selectedFuseType,
+                  isExpanded: true,
+                  items: fuseTypes.map((String fuseType) {
+                    return DropdownMenuItem<String>(
+                      value: fuseType,
+                      child: Text(fuseType),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedFuseType = newValue!;
+                    });
+                    loadFuseFile(selectedFuseType);
+                  },
+                ),
+
+                const SizedBox(height: 20),
+              ],
+
+            if (selectedMode == "Fuse Chart Lookup") ...[
+              const Text(
+                "Fuse Rating",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              DropdownButton<String>(
+                value: selectedFuseRating,
+                isExpanded: true,
+                //items: fuseRatings.map((String rating) {
+                items: loadedRatings.map((String rating) {
+                  return DropdownMenuItem<String>(
+                    value: rating,
+                    child: Text(rating),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedFuseRating = newValue!;
+                  });
+                },
+              ),
+            ],
+
+            TextField(
+              controller: voltageController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: "Voltage Drop (mV)",
+              ),
             ),
+
+            const SizedBox(height: 20),
+
+            if (selectedMode == "Manual Resistance")
+              TextField(
+                controller: resistanceController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: "Fuse Resistance (mΩ)",
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            // ElevatedButton(
+            //   onPressed: calculateCurrent,
+            //   child: const Text("Calculate"),
+            // ),
+
+            Row(
+              children: [
+                ElevatedButton(
+                  onPressed: calculateCurrent,
+                  child: const Text("Calculate"),
+                ),
+
+                const SizedBox(width: 10),
+
+                ElevatedButton(
+                  onPressed: clearFields,
+                  child: const Text("Clear"),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 30),
+
+            Text(
+              "Current Draw:",
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+
+            const SizedBox(height: 10),
+
+            // Text(
+            //   "${currentDraw.toStringAsFixed(3)} A",
+            //   style: const TextStyle(
+            //     fontSize: 30,
+            //     fontWeight: FontWeight.bold,
+            //   ),
+            // ),
+
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${currentDraw.toStringAsFixed(3)} A",
+                  style: const TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  "${currentDrawMa.toStringAsFixed(0)} mA",
+                  style: const TextStyle(
+                    fontSize: 24,
+                  ),
+                ),
+                Text(
+                  diagnosis,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }
