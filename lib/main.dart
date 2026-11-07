@@ -34,12 +34,16 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
   Future<void> loadFuseFile(String fuseType) async {
     
     String fileName = fuseFiles[fuseType]!;
-
+    print("Loading fuse file: $fileName");
     String data =
       await rootBundle.loadString(
         'assets/data/$fileName',
       );
     List<String> lines = data.split('\n');
+    loadedLines = lines;
+
+    List<String> testRow = lines[50].split(',');
+
     String ratingLine = lines[2];
     List<String> ratings = ratingLine.split(',');
     ratings.removeAt(0);
@@ -51,16 +55,14 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
       }
     });
 
-    print("Loaded Ratings:");
-    print(loadedRatings);
-    print("Number of ratings: ${loadedRatings.length}");
-  }
+   }
   // end of the test for loading the files
 
   //
   // the variables
   //
   List<String> loadedRatings = [];
+  List<String> loadedLines = [];
   double currentDraw = 0.0;
   double currentDrawMa = 0.0;
   String diagnosis = "";
@@ -82,19 +84,7 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
     'Glass': 'glass_fuse.txt',
   };
   String selectedFuseRating = "10Amp";
-  final List<String> fuseRatings = [
-    "1A",
-    "2A",
-    "3A",
-    "4A",
-    "5A",
-    "7.5A",
-    "10A",
-    "15A",
-    "20A",
-    "25A",
-    "30A"
-  ];
+
   String selectedMode = "Manual Resistance";
 
   final List<String> calculationModes = [
@@ -103,12 +93,6 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
   ];
 
   double lookupCurrentMa = 0.0;
-  final Map<double, double> mini10ATable = {
-    4.7: 633,
-    4.8: 647,
-    4.9: 660,
-    5.0: 674,
-  };
 
   @override
   void initState() {
@@ -135,36 +119,61 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
   void calculateCurrent() {
     double voltageMv =
         double.tryParse(voltageController.text) ?? 0.0;
-    
     if (selectedMode == "Fuse Chart Lookup") {
+      List<String> ratingColumns =
+        loadedLines[2].split(',');
+      int ratingColumn =
+        ratingColumns.indexOf(selectedFuseRating);
 
-      if (selectedFuseType == "Mini" &&
-        selectedFuseRating == "10Amp") {
+      for (int i = 3; i < loadedLines.length; i++) {
+        List<String> row =
+          loadedLines[i].split(',');
+        double rowVoltage =
+          double.tryParse(row[0]) ?? -1;
 
-        if (mini10ATable.containsKey(voltageMv)) {
 
-          setState(() {
-
-            lookupCurrentMa = mini10ATable[voltageMv]!;
-
-            currentDrawMa = lookupCurrentMa;
-            currentDraw = lookupCurrentMa / 1000.0;
-
-            if (currentDrawMa < 50) {
-              diagnosis = "Normal";
+        for (int i = 3; i < loadedLines.length - 1; i++) {
+          List<String> row1 =
+            loadedLines[i].split(',');
+          List<String> row2 =
+            loadedLines[i + 1].split(',');
+          double v1 =
+            double.tryParse(row1[0]) ?? -1;
+          double v2 =
+            double.tryParse(row2[0]) ?? -1;
+          if (voltageMv >= v1 &&
+            voltageMv <= v2) {
+              double c1 =
+                double.tryParse(
+                  row1[ratingColumn]) ?? 0.0;
+              double c2 =
+                double.tryParse(
+                  row2[ratingColumn]) ?? 0.0;
+              double lookupValue =
+                c1 +
+                (voltageMv - v1) *
+                (c2 - c1) /
+                (v2 - v1);
+              setState(() {
+                currentDrawMa = lookupValue;
+                currentDraw = lookupValue / 1000.0;
+                if (currentDrawMa < 50) {
+                  diagnosis = "Normal";
+                } else if (currentDrawMa < 100) {
+                  diagnosis = "Elevated";
+                } else {
+                  diagnosis = "Excessive Draw";
+                }
+              });
+              print("Interpolated Value:");
+              print(lookupValue);
+              return;
             }
-            else if (currentDrawMa < 100) {
-              diagnosis = "Elevated";
-            }
-            else {
-              diagnosis = "Excessive Draw";
-            }
-          });
-
-          return;
         }
+
       }
     }
+
 
     double resistanceMohm =
         double.tryParse(resistanceController.text) ?? 0.0;
@@ -300,11 +309,6 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
 
             const SizedBox(height: 20),
 
-            // ElevatedButton(
-            //   onPressed: calculateCurrent,
-            //   child: const Text("Calculate"),
-            // ),
-
             Row(
               children: [
                 ElevatedButton(
@@ -329,14 +333,6 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
             ),
 
             const SizedBox(height: 10),
-
-            // Text(
-            //   "${currentDraw.toStringAsFixed(3)} A",
-            //   style: const TextStyle(
-            //     fontSize: 30,
-            //     fontWeight: FontWeight.bold,
-            //   ),
-            // ),
 
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
