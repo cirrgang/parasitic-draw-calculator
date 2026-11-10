@@ -90,15 +90,13 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
   Future<void> loadFuseFile(String fuseType) async {
     
     String fileName = fuseFiles[fuseType]!;
-    print("Loading fuse file: $fileName");
+    
     String data =
       await rootBundle.loadString(
         'assets/data/$fileName',
       );
     List<String> lines = data.split('\n');
     loadedLines = lines;
-
-    List<String> testRow = lines[50].split(',');
 
     String ratingLine = lines[2];
     List<String> ratings = ratingLine.split(',');
@@ -200,6 +198,33 @@ class _ParasiticDrawPageState extends State<ParasiticDrawPage> {
         loadedLines[2].split(',');
       int ratingColumn =
         ratingColumns.indexOf(selectedFuseRating);
+
+      double minVoltage =
+        double.tryParse(
+          loadedLines[3].split(',')[0],
+        ) ?? 0.0;
+
+      double maxVoltage = 0.0;
+      for (int i = loadedLines.length - 1; i >= 3; i--) {
+        double? value =
+            double.tryParse(
+                loadedLines[i].split(',')[0]);
+        if (value != null) {
+          maxVoltage = value;
+          break;
+        }
+      }
+
+      if (voltageMv < minVoltage ||
+          voltageMv > maxVoltage) {
+        setState(() {
+          currentDraw = 0.0;
+          currentDrawMa = 0.0;
+          diagnosis =
+            "Voltage outside chart range";
+        });
+        return;
+      }
 
         //
         // Linear interpolation
