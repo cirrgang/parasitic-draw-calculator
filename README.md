@@ -1,17 +1,29 @@
-# hello_flutter
+# Parasitic Draw Calculator
 
-A new Flutter project.
+An Android application for automotive parasitic draw diagnostics.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- Fuse voltage-drop current calculations
+- Fuse chart lookup mode
+- Manual resistance calculation mode
+- Dynamic fuse chart loading
+- Linear interpolation between chart values
+- Dark mode interface
 
-A few resources to get you started if this is your first Flutter project:
+## Supported Fuse Types
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- Mini
+- Micro
+- Standard
+- Maxi
+- Cartridge
+- Glass
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Purpose
+
+This application helps automotive technicians and DIY enthusiasts estimate current draw from fuse voltage-drop measurements without manually consulting fuse charts.
+
+## Status
+
+Version 1.0
